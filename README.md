@@ -1,6 +1,6 @@
 # EVSE Test System
 
-The EVSE Test System is a modified [EVerest](https://github.com/EVerest) firmware stack that provides additional modules for conformance and interoperability testing of Electric Vehicle Supply Equipment (EVSE). It allows users to run test scenarios that modify charger behavior, putting vehicles into unexpected or invalid situations to verify that they respond appropriately.
+The EVSE Test System is a modified [EVerest](https://github.com/EVerest) firmware stack that provides additional modules for testing the interoperability of Electric Vehicles. It allows users to run test scenarios that modify charger behavior, putting vehicles into unexpected or invalid situations to verify that they respond appropriately.
 
 The system supports testing against the **DIN 70121** and **ISO 15118-2** Vehicle-to-Grid (V2G) communication protocols, with both **AC** and **DC** charging modes, and **EIM** (External Identification Mode) and **Plug & Charge** authentication methods.
 
