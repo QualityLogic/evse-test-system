@@ -1,0 +1,5 @@
+generate_config_run_script(CONFIG phytec-ac-ocpp-pnc-test)
+generate_config_run_script(CONFIG phytec-ac-test)
+generate_config_run_script(CONFIG sil-ac-ocpp-pnc-test)
+generate_config_run_script(CONFIG sil-ac-test)
+generate_config_run_script(CONFIG sil-dc-test)

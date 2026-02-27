@@ -1,0 +1,281 @@
+settings:
+  telemetry_enabled: true
+active_modules:
+  api:
+    module: API
+    connections:
+      evse_manager:
+        - module_id: evse_manager
+          implementation_id: evse
+      ocpp:
+        - module_id: ocpp
+          implementation_id: ocpp_generic
+      error_history:
+        - module_id: error_history
+          implementation_id: error_history
+      evse_energy_sink:
+        - module_id: evse_manager_api_sink
+          implementation_id: external_limits
+
+  auth:
+    module: Auth
+    config_module:
+      connection_timeout: 10
+      selection_algorithm: PlugEvents
+    connections:
+      evse_manager:
+        - module_id: evse_manager
+          implementation_id: evse
+      token_provider:
+        - module_id: iso15118_charger
+          implementation_id: token_provider
+        - module_id: ocpp
+          implementation_id: auth_provider
+        - module_id: evse_manager
+          implementation_id: token_provider
+      token_validator:
+        - module_id: ocpp
+          implementation_id: auth_validator
+
+  ocpp:
+    module: OCPP201
+    connections:
+      evse_manager:
+        - module_id: evse_manager
+          implementation_id: evse
+      auth:
+        - module_id: auth
+          implementation_id: main
+      system:
+        - module_id: system
+          implementation_id: main
+      security:
+        - module_id: evse_security
+          implementation_id: main
+      evse_energy_sink:
+        - module_id: grid_connection_point
+          implementation_id: external_limits
+        - module_id: evse_manager_ocpp_sink
+          implementation_id: external_limits
+      reservation:
+        - module_id: auth
+          implementation_id: reservation
+      extensions_15118:
+        - module_id: iso15118_charger
+          implementation_id: extensions
+
+  evse_manager:
+    module: EvseManager
+    mapping:
+      module:
+        evse: 1
+    config_module:
+      ac_enforce_hlc: true
+      ac_hlc_enabled: true
+      ac_hlc_use_5percent: true
+      ac_nominal_voltage: 230
+      ac_with_soc: false
+      charge_mode: AC
+      connector_id: 1
+      dbg_hlc_auth_after_tstep: false
+      ev_receipt_required: false
+      evse_id: DE*PNX*E123456*1
+      has_ventilation: true
+      payment_enable_contract: true
+      payment_enable_eim: true
+      session_logging: true
+      session_logging_path: /tmp/logs
+      session_logging_xml: false
+    connections:
+      bsp:
+        - module_id: phyverso_mcu
+          implementation_id: connector_1
+      hlc:
+        - module_id: iso15118_charger
+          implementation_id: charger
+      slac:
+        - module_id: slac
+          implementation_id: main
+      connector_lock:
+        - module_id: phyverso_mcu
+          implementation_id: connector_lock_1
+      powermeter_grid_side:
+        - module_id: power_meter
+          implementation_id: main
+    telemetry:
+      id: 1
+
+  evse_test_manager:
+    module: EvseTestManager
+    config_module:
+      connector_id: 1
+      capture_device: seth0
+    connections:
+      hlc:
+        - module_id: iso15118_charger
+          implementation_id: tester
+      evse_manager:
+        - module_id: evse_manager
+          implementation_id: evse
+
+  py_test_server:
+    module: PyTestServer
+    config_module:
+      port: 1986
+      charge_mode: AC
+      payment_enable_eim: true
+      payment_enable_contract: true
+      supported_DIN70121: false
+      supported_ISO15118_2: true
+    connections:
+      test_manager:
+        - module_id: evse_test_manager
+          implementation_id: evse
+
+  iso15118_charger:
+    module: EvseTestV2G
+    config_module:
+      device: seth0
+      tls_security: allow
+      tls_key_logging: true
+      supported_DIN70121: false
+      include_custom_service: true
+      verify_contract_cert_chain: false
+    connections:
+      bsp:
+        - module_id: phyverso_mcu
+          implementation_id: connector_1
+      security:
+        - module_id: evse_security
+          implementation_id: main
+
+  evse_security:
+    module: EvseSecurity
+
+  persistent_store:
+    module: PersistentStore
+    config_module:
+      sqlite_db_file_path: /etc/everest/everest_persistent_store.db
+    connections: {}
+
+  error_history:
+    module: ErrorHistory
+    config_implementation:
+      error_history:
+        database_path: /tmp/error_history.db
+
+  system:
+    module: System
+
+  setup:
+    module: Setup
+    config_module:
+      localization: true
+      setup_simulation: false
+      setup_wifi: true
+    connections:
+      store:
+        - module_id: persistent_store
+          implementation_id: main
+
+  slac:
+    module: EvseSlac
+    config_implementation:
+      main:
+        device: seth0
+        number_of_sounds: 10
+    connections: {}
+
+  # ===========================
+  #     Energy Management
+  # ===========================
+
+  energy_manager:
+    module: EnergyManager
+    connections:
+      energy_trunk:
+        - module_id: grid_connection_point
+          implementation_id: energy_grid
+
+  evse_manager_ocpp_sink:
+    module: EnergyNode
+    mapping:
+      module:
+        evse: 1
+    config_module:
+      fuse_limit_A: 63
+      phase_count: 3
+    connections:
+      energy_consumer:
+        - module_id: evse_manager
+          implementation_id: energy_grid
+
+  evse_manager_api_sink:
+    module: EnergyNode
+    mapping:
+      module:
+        evse: 1
+    config_module:
+      fuse_limit_A: 63
+      phase_count: 3
+    connections:
+      energy_consumer:
+        - module_id: evse_manager_ocpp_sink
+          implementation_id: energy_grid
+      # Should the power meter be excluded?
+      powermeter:
+        - module_id: power_meter
+          implementation_id: main
+
+  grid_connection_point:
+    module: EnergyNode
+    mapping:
+      module:
+        evse: 0
+    config_module:
+      fuse_limit_A: 63
+      phase_count: 3
+    connections:
+      energy_consumer:
+        - module_id: evse_manager_api_sink
+          implementation_id: energy_grid
+
+  # ===========================
+  #     Hardware Interface
+  # ===========================
+
+  phyverso_mcu:
+    module: PhyVersoBSP
+    config_module:
+      conn1_max_current_A_import: 16
+      conn1_max_phase_count_import: 1
+      conn1_dc: false
+      # reset_gpio_bank:2
+      # reset_gpio_pin: 6
+      conn1_motor_lock_type: 1
+      conn2_motor_lock_type: 1
+      serial_port: /dev/ttyS6
+      conn1_gpio_stop_button_enabled: true
+      conn1_gpio_stop_button_bank: gpiochip1
+      conn1_gpio_stop_button_pin: 36
+
+  serial_comm_hub:
+    module: SerialCommHub
+    config_implementation:
+      main:
+        serial_port: /dev/ttyS4
+        baudrate: 9600
+        rxtx_gpio_line: 44
+        rxtx_gpio_chip: gpiochip2
+        rxtx_gpio_tx_high: true
+
+  power_meter:
+    module: GenericPowermeter
+    connections:
+      serial_comm_hub:
+        - module_id: serial_comm_hub
+          implementation_id: main
+    config_implementation:
+      main:
+        model: "Eastron_SDM230"
+        powermeter_device_id: 1

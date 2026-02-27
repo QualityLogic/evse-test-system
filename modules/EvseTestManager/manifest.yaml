@@ -1,0 +1,31 @@
+description: EVSE Test Manager
+config:
+  connector_id:
+    description: Connector id of the evse manager to which this test system is connected to
+    type: integer
+  capture_device:
+    description: The ethernet device on which session messages are to be captured
+    type: string
+    default: eth1
+  session_logging_path:
+    description: Output directory for session capture dump files
+    type: string
+    default: /tmp/everest-capture-logs
+  remove_session_logs:
+    description: Remove old session capture dump files at startup
+    type: boolean
+    default: true
+provides:
+  evse:
+    description: This is the main EVSE Test Manager interface
+    interface: evse_test_manager
+requires:
+  hlc:
+    interface: evse_test_v2g
+  evse_manager:
+    interface: evse_manager
+enable_external_mqtt: true
+metadata:
+  license: https://opensource.org/licenses/Apache-2.0
+  authors:
+    - Christian Burns, QualityLogic Inc.

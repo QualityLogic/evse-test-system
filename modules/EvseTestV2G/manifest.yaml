@@ -1,0 +1,140 @@
+description: >-
+  This module includes a DIN70121 and ISO15118-2 implementation provided by
+  chargebyte GmbH and a test system implementation provided by QualityLogic
+config:
+  device:
+    description: >-
+      Ethernet device used for HLC. Any local interface that has an ipv6
+      link-local and a MAC addr will work
+    type: string
+    default: eth0
+  supported_DIN70121:
+    description: The EVSE supports the DIN SPEC
+    type: boolean
+    default: true
+  supported_ISO15118_2:
+    description: The EVSE supports ISO15118-2
+    type: boolean
+    default: true
+  tls_security:
+    description: >-
+      Controls how to handle encrypted communication
+    type: string
+    enum:
+    - prohibit
+    - allow
+    - force
+    default: prohibit
+  terminate_connection_on_failed_response:
+    description: >-
+      Controls how to handle a failed response code of the EVSE. If true the
+      V2G connection is terminated immediately on a failed response code, otherwise
+      the EV is responsible for closing of the V2G communication session with SessionStop.
+    type: boolean
+    default: false
+  tls_key_logging:
+    description: >-
+      Enable/Disable the export of TLS session keys (pre-master-secret)
+      during a TLS handshake. This log file can be used to decrypt TLS
+      sessions. Note that this option is for testing and simulation
+      purpose only
+    type: boolean
+    default: false
+  tls_key_logging_path:
+    description:  >-
+      Output directory for the TLS key log file
+    type: string
+    default: /tmp
+  tls_timeout:
+    description: >-
+      Set the TLS timeout in ms when establishing a tls connection 
+    type: integer
+    default: 15000
+  verify_contract_cert_chain:
+    description: >-
+      Specifies if the EVSE should verify the contract certificate
+      chain locally.
+    type: boolean
+    default: false
+  auth_timeout_pnc:
+    description: >-
+      Defines how many seconds the EVSE should wait for authorization in PnC case,
+      before the charging session is aborted.
+      Write 0 if the EVSE should wait indefinitely for PnC authorization.
+    type: integer
+    default: 55
+  auth_timeout_eim:
+    description: >-
+      Defines how many seconds the EVSE should wait for authorization in EIM case,
+      before the charging session is aborted.
+      Write 0 if the EVSE should wait indefinitely for EIM authorization.
+    type: integer
+    default: 300
+  enable_sdp_server:
+    description: >-
+      Enable the built-in SDP server
+    type: boolean
+    default: true
+  include_custom_service:
+    description: >-
+      Include a custom service in ServiceDiscoveryRes messages for tests which require
+      a ServiceDetailReq to be received.
+    type: boolean
+    default: false
+provides:
+  charger:
+    interface: ISO15118_charger
+    description: >-
+      This module implements the ISO15118-2 implementation of
+      an AC or DC charger
+  extensions:
+    interface: iso15118_extensions
+    description: >-
+      This interface is used to share data between ISO15118 and OCPP modules
+      to support the requirements of the OCPP protocol
+  tester:
+    interface: evse_test_v2g
+    description: >-
+      This interface is used to share data between EvseTestManager and V2G modules
+      to support the requirements of the test system
+  token_provider:
+    description: >-
+      This interface implements a dummy token provider always returning one configured token
+    interface: auth_token_provider
+    config:
+      token:
+        description: Dummy token string to return
+        type: string
+        minLength: 1
+        maxLength: 20
+        default: DEADBEEF
+      type:
+        description: Type to report for our dummy token
+        type: string
+        minLength: 2
+        maxLength: 32
+        default: RFID
+      timeout:
+        description: Time our dummy token is valid (in s)
+        type: number
+        minimum: 0
+        maximum: 120
+        default: 10
+      connector_id:
+        description: If >0, the generated token is only valid for this connector_id
+        type: integer
+        minimum: 0
+        default: 0
+requires:
+  bsp:
+    interface: evse_board_support
+  security:
+    interface: evse_security
+enable_external_mqtt: true
+metadata:
+  license: https://opensource.org/licenses/Apache-2.0
+  authors:
+    - Fabian Hartung
+    - Mohannad Oraby
+    - Sebastian Lukas
+    - Christian Burns, QualityLogic Inc.

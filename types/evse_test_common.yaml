@@ -1,0 +1,113 @@
+description: >-
+  Type definitions shared across multiple EVSE test system interfaces.
+types:
+  TestId:
+    description: Enum type for a V2G test case's static identifier.
+    type: string
+    enum:
+      - V2GT_TC_CHN_SessionSetup_004
+      - V2GT_TC_CHN_SessionSetup_007
+      - V2GT_TC_CHN_ServiceDiscovery_008
+      - V2GT_TC_CHN_ServiceDetail_011
+      - V2GT_TC_CHN_ServiceDetail_013
+      - V2GT_TC_CHN_ServiceDetailAndPaymentSelection_003
+      - V2GT_TC_CHN_ServiceDetailAndPaymentSelection_012
+      - V2GT_TC_CHN_Authorization_004
+      - V2GT_TC_CHN_Authorization_009
+      - V2GT_TC_CHN_ChargeParameterDiscovery_002
+      - V2GT_TC_CHN_CableCheck_006
+      - V2GT_TC_CHN_CableCheck_007
+      - V2GT_TC_CHN_PreCharge_006
+      - V2GT_TC_CHN_CurrentDemand_002
+      - V2GT_TC_CHN_CurrentDemand_005
+      - V2GT_TC_CHN_CurrentDemand_007
+      - V2GT_TC_CHN_WeldingDetectionOrSessionStop_001
+      - V2GT_TC_CHX_SmartChargingScheduling_001
+      - V2GT_TC_CHX_SmartChargingScheduling_002
+      - V2GT_TC_CHX_SmartChargingScheduling_003
+  V2GProtocol:
+    description: Enum type to identify a V2G app protocol.
+    type: string
+    enum:
+      - DIN_70121
+      - ISO_15118_2
+  ChargeMode:
+    description: Enum type to identify a V2G charging mode.
+    type: string
+    enum:
+      - AC
+      - DC
+  IdentificationMode:
+    description: Enum type to identify a V2G identification mode.
+    type: string
+    enum:
+      - EIM
+      - PnC
+  TestOutcome:
+    description: Enum type to identify a test's overall outcome.
+    type: string
+    enum:
+      - NotStarted
+      - PreconditionsNotMet
+      - PassCriteriaNotMet
+      - PassCriteriaMet
+      - Canceled
+  TestState:
+    description: Enum type to identify a test's state.
+    type: string
+    enum:
+      - Queued
+      - Running
+      - Canceled
+      - Finished
+  TestConstraints:
+    description: >-
+      The type defining constraints to be applied to a test execution.
+    type: object
+    additionalProperties: false
+    properties:
+      protocols:
+        description: A list of V2G app protocols to constrain to.
+        type: array
+        items:
+          type: string
+          $ref: /evse_test_common#/V2GProtocol
+      charge_modes:
+        description: A list of charge modes to constrain to.
+        type: array
+        items:
+          type: string
+          $ref: /evse_test_common#/ChargeMode
+      ident_modes:
+        description: A list of identification modes to constrain to.
+        type: array
+        items:
+          type: string
+          $ref: /evse_test_common#/IdentificationMode
+  RunContext:
+    description: >-
+      The type describing the timing, protocols, and services selected during a
+      test's execution.
+    type: object
+    additionalProperties: false
+    properties:
+      start_timestamp:
+        description: The date-time the test execution began
+        type: string
+        format: date-time
+      end_timestamp:
+        description: The date-time the test execution ended
+        type: string
+        format: date-time
+      protocol:
+        description: The V2G app protocol selected and used
+        type: string
+        $ref: /evse_test_common#/V2GProtocol
+      charge_mode:
+        description: The charge mode used
+        type: string
+        $ref: /evse_test_common#/ChargeMode
+      ident_mode:
+        description: The identification mode used
+        type: string
+        $ref: /evse_test_common#/IdentificationMode

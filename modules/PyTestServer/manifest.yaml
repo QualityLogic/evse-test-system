@@ -1,0 +1,44 @@
+description: Simple webserver module written in Python to control and view test case results.
+config:
+  localhost:
+    description: Set to true to start web server on localhost.
+    type: boolean
+    default: false
+  port:
+    description: The port number to bind the web server to.
+    type: number
+    default: 1986
+  payment_enable_eim:
+    description: Set to true to enable EIM (e.g. RFID card or mobile app) authorization
+    type: boolean
+    default: true
+  payment_enable_contract:
+    description: Set to true to enable contract (aka plug and charge) authorization
+    type: boolean
+    default: true
+  charge_mode:
+    description: Select charging mode
+    type: string
+    enum:
+      - AC
+      - DC
+    default: AC
+  supported_DIN70121:
+    description: The EVSE supports the DIN SPEC
+    type: boolean
+    default: false
+  supported_ISO15118_2:
+    description: The EVSE supports ISO 15118-2
+    type: boolean
+    default: false
+provides:
+  main:
+    description: EVerest Setup
+    interface: empty
+requires:
+  test_manager:
+    interface: evse_test_manager
+metadata:
+  license: https://opensource.org/licenses/Apache-2.0
+  authors:
+    - Christian Burns

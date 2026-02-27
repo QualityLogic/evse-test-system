@@ -1,0 +1,51 @@
+description: >-
+  Type definitions used by the EVSE Test V2G interface.
+types:
+  TestResult:
+    description: >-
+      The type describing the outcome and context of a test execution.
+    type: object
+    additionalProperties: false
+    required:
+      - outcome
+      - context
+      - evidence
+    properties:
+      outcome:
+        description: The test's overall outcome
+        type: string
+        $ref: /evse_test_common#/TestOutcome
+      context:
+        description: The test's runtime context
+        type: object
+        $ref: /evse_test_common#/RunContext
+      evidence:
+        description: A list of notable events to support the test outcome
+        type: array
+        items:
+          # TODO: Should this be a more sophisticated type?
+          type: string
+      reports:
+        description: A list of reported events during the test execution
+        type: array
+        items:
+          type: object
+          $ref: /test_report#/Report
+      errors:
+        description: A list of problems that occurred running the test
+        type: array
+        items:
+          # TODO: is there a better way for internationalization?
+          type: string
+  TestStatus:
+    description: >-
+      The type describing a specific test instance's current status.
+    type: object
+    additionalProperties: false
+    required:
+      - status
+    properties:
+      status:
+        description: The test's current status
+        type: string
+        $ref: /evse_test_common#/TestState

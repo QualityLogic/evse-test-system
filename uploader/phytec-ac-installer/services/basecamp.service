@@ -1,0 +1,12 @@
+[Unit]
+Description=Everest Test System
+Requires=mosquitto.service
+After=mosquitto.service
+ConditionFileNotEmpty=%EverestInstallDir%/everest/config/%EverestConfigFile%
+
+[Service]
+Type=simple
+Restart=always
+Nice=-20
+Environment="LD_LIBRARY_PATH=%EverestInstallDir%/everest/dist/lib:${LD_LIBRARY_PATH}"
+ExecStart=%EverestInstallDir%/everest/dist/bin/manager --prefix %EverestInstallDir%/everest/dist --conf %EverestInstallDir%/everest/config/%EverestConfigFile%

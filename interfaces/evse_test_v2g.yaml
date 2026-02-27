@@ -1,0 +1,28 @@
+description: >-
+  This interface defines the EVSE Test V2G.
+cmds:
+  set_test_context:
+    description: Set the test context for the next charging session.
+    arguments:
+      test_id:
+        description: Specifies the static ID of the test case
+        type: string
+        $ref: /evse_test_common#/TestId
+      constraints:
+        description: Specifies the constraints to apply
+        type: object
+        $ref: /evse_test_common#/TestConstraints
+  cancel_test:
+    description: Cancel the current test case and active charging session
+vars:
+  test_status:
+    description: Provides status update of the active test
+    type: object
+    $ref: /evse_test_v2g#/TestStatus
+  test_result:
+    description: Provides results of completed test executions
+    type: object
+    $ref: /evse_test_v2g#/TestResult
+  heartbeat:
+    description: Notifies at routine intervals during active V2G communication
+    type: 'null'

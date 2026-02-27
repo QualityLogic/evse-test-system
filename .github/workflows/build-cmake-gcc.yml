@@ -1,0 +1,148 @@
+name: Build with CMake and GCC
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Which runner to use'
+        required: false
+        default: 'ubuntu-22.04'
+        type: string
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build-cmake-gcc:
+    name: Build with CMake and GCC, and Install
+    runs-on: ${{ inputs.runner }}
+    env:
+      EVEREST_PROJECT_DIR: source
+      EVEREST_WORKSPACE: everest-workspace
+      DIST_ARTIFACT_NAME: dist
+    outputs:
+      dist_artifact_name: ${{ env.DIST_ARTIFACT_NAME }}
+    steps:
+    - name: Install apt packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-pip python3-venv git rsync wget cmake doxygen \
+          graphviz build-essential clang-tidy cppcheck openjdk-17-jdk npm docker \
+          docker-compose libboost-all-dev nodejs libssl-dev libsqlite3-dev \
+          clang-format curl rfkill libpcap-dev libevent-dev pkg-config libcap-dev
+        python3 -m pip install -U pip setuptools wheel jstyleson jsonschema
+
+    - name: Set Environment Variables
+      run: |
+        echo "CPM_SOURCE_CACHE=$HOME/.cache/CPM" >> $GITHUB_ENV
+        echo "PATH=$PATH:/home/$(whoami)/.local/bin" >> $GITHUB_ENV
+
+    # ===========================================
+    #   Check out Required EVerest Repositories
+    # ===========================================
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        path: ${{ env.EVEREST_PROJECT_DIR }}
+
+    - name: Checkout EVerest Dependency Manager
+      uses: actions/checkout@v4
+      with:
+        repository: EVerest/everest-dev-environment
+        path: ${{ env.EVEREST_WORKSPACE }}/everest-dev-environment
+
+    - name: Checkout EVerest CMake repository
+      uses: actions/checkout@v4
+      with:
+        repository: EVerest/everest-cmake
+        path: ${{ env.EVEREST_WORKSPACE }}/everest-cmake
+
+    - name: Checkout EVerest Framework repository
+      uses: actions/checkout@v4
+      with:
+        repository: EVerest/everest-framework
+        path: ${{ env.EVEREST_WORKSPACE }}/everest-framework
+
+    - name: Checkout EVerest Utils repository
+      uses: actions/checkout@v4
+      with:
+        repository: EVerest/everest-utils
+        path: ${{ env.EVEREST_WORKSPACE }}/everest-utils
+
+    # ==================================
+    #   Install Required EVerest Tools
+    # ==================================
+
+    - name: Install EVerest Dependency Manager
+      working-directory: ${{ env.EVEREST_WORKSPACE }}/everest-dev-environment/dependency_manager
+      run: python3 -m pip install .
+
+    - name: Install EVerest CLI
+      working-directory: ${{ env.EVEREST_WORKSPACE }}/everest-utils/ev-dev-tools
+      run: python3 -m pip install .
+
+    # =======================
+    #   Compile The Project
+    # =======================
+
+    - name: Create Build Directory
+      working-directory: ${{ env.EVEREST_PROJECT_DIR }}
+      run: mkdir -p build
+
+    - name: CMake Build
+      working-directory: ${{ env.EVEREST_PROJECT_DIR }}/build
+      run: |
+        EVEREST_WORKSPACE="${{ github.workspace }}/${{ env.EVEREST_WORKSPACE }}"
+        EVEREST_PROJECT_DIR="${{ github.workspace }}/${{ env.EVEREST_PROJECT_DIR }}"
+        CMAKE_PREFIX_PATH=$EVEREST_WORKSPACE cmake --install-prefix $EVEREST_PROJECT_DIR/dist ..
+        make -j$(nproc)
+
+    - name: CMake Install
+      working-directory: ${{ env.EVEREST_PROJECT_DIR }}/build
+      run: make -j$(nproc) install
+
+    # =============================
+    #   Modify OCPP 2.0.1 Configs
+    # =============================
+
+    - name: Remove OCPP 2.0.1 Configs for 2nd EVSE
+      run: |
+        dist_modules_dir="${{ github.workspace }}/${{ env.EVEREST_PROJECT_DIR }}/dist/share/everest/modules"
+        files_to_remove=(
+          "$dist_modules_dir/OCPP201/component_config/custom/Connector_2_1.json"
+          "$dist_modules_dir/OCPP201/component_config/custom/EVSE_2.json"
+        )
+
+        # Remove the OCPP files for a second EVSE from the OCPP configuration
+        for file in "${files_to_remove[@]}"; do
+          if [ -f "$file" ]; then
+            rm "$file"
+            echo "Removed: $file"
+          else
+            echo "Skipped (not found): $file"
+          fi
+        done
+
+    - name: Enable OCPP 2.0.1 Certificate Installation
+      run: |
+        FILE_PATH="${{ github.workspace }}/${{ env.EVEREST_PROJECT_DIR }}/dist/share/everest/modules/OCPP201/component_config/standardized/ISO15118Ctrlr.json"
+        
+        # Use jq to add the "value: true" field to the first element of the attributes array
+        jq '.properties.V2GCertificateInstallationEnabled.attributes[0] += {"value": true}' "$FILE_PATH" > tmp.json && mv tmp.json "$FILE_PATH"
+        jq '.properties.ContractCertificateInstallationEnabled.attributes[0] += {"value": true}' "$FILE_PATH" > tmp.json && mv tmp.json "$FILE_PATH"
+
+    # =======================
+    #   Create dist Archive
+    # =======================
+
+    - name: Tar dist dir and keep permissions
+      run: tar -czf dist.tar.gz "${{ env.EVEREST_PROJECT_DIR }}/dist"
+
+    - name: Upload dist artifact
+      uses: actions/upload-artifact@v4.6.2
+      with:
+        if-no-files-found: error
+        path: dist.tar.gz
+        name: ${{ env.DIST_ARTIFACT_NAME }}

@@ -1,0 +1,250 @@
+active_modules:
+  api:
+    module: API
+    connections:
+      evse_manager:
+        - module_id: evse_manager
+          implementation_id: evse
+      ocpp:
+        - module_id: ocpp
+          implementation_id: ocpp_generic
+      error_history:
+        - module_id: error_history
+          implementation_id: error_history
+      evse_energy_sink:
+        - module_id: evse_manager_api_sink
+          implementation_id: external_limits
+  error_history:
+    module: ErrorHistory
+    config_implementation:
+      error_history:
+        database_path: /tmp/error_history.db
+  auth:
+    module: Auth
+    config_module:
+      connection_timeout: 10
+      prioritize_authorization_over_stopping_transaction: true
+      selection_algorithm: FindFirst
+      ignore_connector_faults: true
+    connections:
+      evse_manager:
+        - module_id: evse_manager
+          implementation_id: evse
+      token_provider:
+        - module_id: iso15118_charger
+          implementation_id: token_provider
+        - module_id: ocpp
+          implementation_id: auth_provider
+        - module_id: evse_manager
+          implementation_id: token_provider
+      token_validator:
+        - module_id: ocpp
+          implementation_id: auth_validator
+  ocpp:
+    module: OCPP201
+    connections:
+      evse_manager:
+        - module_id: evse_manager
+          implementation_id: evse
+      auth:
+        - module_id: auth
+          implementation_id: main
+      system:
+        - module_id: system
+          implementation_id: main
+      security:
+        - module_id: evse_security
+          implementation_id: main
+      evse_energy_sink:
+        - module_id: grid_connection_point
+          implementation_id: external_limits
+        - module_id: evse_manager_ocpp_sink
+          implementation_id: external_limits
+      reservation:
+        - module_id: auth
+          implementation_id: reservation
+      extensions_15118:
+        - module_id: iso15118_charger
+          implementation_id: extensions
+  ev_manager:
+    config_module:
+      auto_enable: true
+      auto_exec: false
+      auto_exec_commands: sleep 1;iec_wait_pwr_ready;sleep 1;draw_power_regulated 16,3;sleep 30;unplug
+      connector_id: 1
+    connections:
+      ev:
+        - implementation_id: ev
+          module_id: iso15118_car
+      ev_board_support:
+        - implementation_id: ev_board_support
+          module_id: yeti_driver
+      slac:
+        - implementation_id: ev
+          module_id: slac
+    module: EvManager
+  evse_manager:
+    mapping:
+      module:
+        evse: 1
+    config_module:
+      ac_enforce_hlc: false
+      ac_hlc_enabled: true
+      ac_hlc_use_5percent: false
+      ac_nominal_voltage: 230
+      charge_mode: AC
+      connector_id: 1
+      ev_receipt_required: false
+      evse_id: DE*PNX*E12345*1
+      has_ventilation: true
+      max_current_import_A: 32
+      max_current_export_A: 32
+      payment_enable_contract: true
+      payment_enable_eim: true
+      session_logging: true
+      session_logging_path: /tmp/everest-logs
+      session_logging_xml: false
+      switch_3ph1ph_delay_s: 5
+      switch_3ph1ph_cp_state: X1
+    connections:
+      bsp:
+        - implementation_id: board_support
+          module_id: yeti_driver
+      hlc:
+        - implementation_id: charger
+          module_id: iso15118_charger
+      powermeter_grid_side:
+        - implementation_id: powermeter
+          module_id: yeti_driver
+      slac:
+        - implementation_id: evse
+          module_id: slac
+      ac_rcd:
+        - implementation_id: rcd
+          module_id: yeti_driver
+      connector_lock:
+        - implementation_id: connector_lock
+          module_id: yeti_driver
+    module: EvseManager
+  evse_test_manager:
+    config_module:
+      connector_id: 1
+      capture_device: lo
+    connections:
+      hlc:
+        - implementation_id: tester
+          module_id: iso15118_charger
+      evse_manager:
+        - implementation_id: evse
+          module_id: evse_manager
+    module: EvseTestManager
+  py_test_server:
+    config_module:
+      localhost: true
+      port: 1986
+      charge_mode: AC
+      payment_enable_eim: true
+      payment_enable_contract: true
+      supported_DIN70121: false
+      supported_ISO15118_2: true
+    connections:
+      test_manager:
+        - implementation_id: evse
+          module_id: evse_test_manager
+    module: PyTestServer
+
+  # ===========================
+  #     Energy Management
+  # ===========================
+
+  energy_manager:
+    module: EnergyManager
+    connections:
+      energy_trunk:
+        - module_id: grid_connection_point
+          implementation_id: energy_grid
+
+  evse_manager_ocpp_sink:
+    module: EnergyNode
+    mapping:
+      module:
+        evse: 1
+    config_module:
+      fuse_limit_A: 32
+      phase_count: 3
+    connections:
+      energy_consumer:
+        - module_id: evse_manager
+          implementation_id: energy_grid
+
+  evse_manager_api_sink:
+    module: EnergyNode
+    mapping:
+      module:
+        evse: 1
+    config_module:
+      fuse_limit_A: 32
+      phase_count: 3
+    connections:
+      energy_consumer:
+        - module_id: evse_manager_ocpp_sink
+          implementation_id: energy_grid
+      powermeter:
+        - module_id: yeti_driver
+          implementation_id: powermeter
+
+  grid_connection_point:
+    module: EnergyNode
+    mapping:
+      module:
+        evse: 0
+    config_module:
+      fuse_limit_A: 40
+      phase_count: 3
+    connections:
+      energy_consumer:
+        - module_id: evse_manager_api_sink
+          implementation_id: energy_grid
+
+  # ===========================
+
+  iso15118_car:
+    module: PyEvJosev
+    config_module:
+      device: auto
+      supported_ISO15118_2: true
+      tls_active: true
+      is_cert_install_needed: true
+  iso15118_charger:
+    module: EvseTestV2G
+    config_module:
+      device: auto
+      tls_security: allow
+      tls_key_logging: true
+      supported_DIN70121: false
+      include_custom_service: true
+      verify_contract_cert_chain: false
+    connections:
+      bsp:
+        - module_id: yeti_driver
+          implementation_id: board_support
+      security:
+        - module_id: evse_security
+          implementation_id: main
+  evse_security:
+    module: EvseSecurity
+    config_module:
+      private_key_password: "123456"
+  slac:
+    module: SlacSimulator
+  yeti_driver:
+    mapping:
+      module:
+        evse: 1
+    config_module:
+      connector_id: 1
+    module: YetiSimulator
+  system:
+    module: System
+
+x-module-layout: {}

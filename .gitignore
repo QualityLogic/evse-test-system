@@ -1,0 +1,12 @@
+*build
+*build-cross
+/build-*
+/dist-*
+.cache/
+workspace.yaml
+.vscode/
+/bazel-*
+/modules/target
+CMakeLists.txt.user
+.idea/
+everest_persistent_store.db

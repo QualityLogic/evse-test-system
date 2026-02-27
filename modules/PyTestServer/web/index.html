@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EV Charging Interop Test System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <script src="scripts/configurator.js" defer></script>
+  <script src="scripts/viewer.js" defer></script>
+</head>
+<body>
+  <main class="p-5">
+    <h2 class="pb-2">EV Charging Interop Test System</h2>
+    <p class="pb-2">A graphical controller created by QualityLogic to schedule tests and view outcomes.</p>
+
+    <!-- Buttons locate at the top of the webpage -->
+    <div class="d-flex gap-2 mb-3">
+      <!-- Toggle Light/Dark theme -->
+      <button type="button" class="btn btn-secondary d-flex align-items-center justify-content-center" id="theme-toggle__button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sun-fill" viewBox="0 0 16 16" id="theme-sun-icon" hidden>
+          <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/>
+        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-moon-fill" viewBox="0 0 16 16" id="theme-moon-icon">
+          <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277q.792-.001 1.533-.16a.79.79 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.75.75 0 0 1 6 .278"/>
+        </svg>
+      </button>
+      <!-- Toggle the Configurator visibility -->
+      <button type="button" class="btn btn-secondary" data-bs-toggle="offcanvas" data-bs-target="#configurator"
+              aria-controls="configurator">
+        Configurator
+      </button>
+      <a class="btn btn-secondary d-flex gap-1 align-items-center justify-content-center" href="/api/v1/result" download>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download me-1" viewBox="0 0 16 16">
+          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+          <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+        </svg> Save Results
+      </a>
+      <button type="button" class="btn btn-danger d-flex gap-1 align-items-center justify-content-center" onclick="deleteAllScenarioResults()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash-fill" viewBox="0 0 16 16">
+          <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5m3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0"/>
+        </svg> Delete Results
+      </button>
+    </div>
+
+    <!-- Tracked Scenarios -->
+    <div class="mt-4">
+      <ul class="list-group" id="tracked-scenarios"></ul>
+    </div>
+
+    <!-- Scenario Result Modal -->
+    <div class="modal fade" id="scenario-result-modal" tabindex="-1" aria-labelledby="scenario-result-modal-label">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="scenario-result-modal-label">Scenario Results</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <pre class="boarder rounded p-2" id="scenario-result__textarea"></pre>
+          </div>
+          <div class="modal-footer">
+            <a id="download-result__button" class="btn btn-secondary disabled" href="#" download>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download me-1" viewBox="0 0 16 16">
+                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+              </svg> Save Results
+            </a>
+            <button id="delete-result__button" type="button" data-bs-dismiss="modal"
+                    class="btn btn-danger d-flex gap-1 align-items-center justify-content-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash-fill" viewBox="0 0 16 16">
+                <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5m3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0"/>
+              </svg> Delete Results
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configurator -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="configurator" aria-labelledby="configurator-label">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="configurator-label">Configurator</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <div>
+          Configuration settings to apply to the next batch of scenarios to perform.
+        </div>
+
+        <!-- Energy Transfer Mode -->
+        <label class="form-label mt-4" for="configurator_etm__checkboxes">Energy Transfer Mode</label>
+        <div class="border rounded p-2" id="configurator_etm__checkboxes"></div>
+
+        <!-- Application Protocols -->
+        <label class="form-label mt-3" for="configurator_proto__checkboxes">Application Protocol</label>
+        <div class="border rounded p-2" id="configurator_proto__checkboxes"></div>
+
+        <!-- Identification Mode -->
+        <label class="form-label mt-3" for="configurator_ident__checkboxes">Identification Mode</label>
+        <div class="border rounded p-2" id="configurator_ident__checkboxes"></div>
+
+        <!-- Test Scenarios -->
+        <label class="form-label mt-3" for="configurator_scenario__checkboxes">Scenarios</label>
+        <div class="border rounded p-2" id="configurator_scenario__checkboxes"></div>
+
+        <!-- Button to upload the selected options to the EVCS -->
+        <button type="button" class="btn btn-primary mt-4" id="configurator_upload__button" data-bs-dismiss="offcanvas"
+                aria-label="Upload" onclick="uploadConfiguration()" disabled>
+          Upload
+        </button>
+      </div>
+    </div>
+
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+</body>
+</html>

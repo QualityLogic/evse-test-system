@@ -1,0 +1,86 @@
+description: EVSE test result reporting types
+types:
+  ReportType:
+    description: Report Type enum
+    type: string
+    enum:
+      - ConnectionClosed
+      - BspEvent
+      - BspMeasurement
+      - V2gMessage
+  MessageField:
+    description: Type for a single message field
+    type: object
+    additionalProperties: false
+    required:
+      - name
+      - value
+    properties:
+      name:
+        description: Name of the message field
+        type: string
+      value:
+        description: Value of the message field
+        type: string
+  V2gMessageDetails:
+    description: Type for reported V2gMessage data
+    type: object
+    additionalProperties: false
+    required:
+      - message_id
+    properties:
+      message_id:
+        description: ID of the V2G message body
+        type: string
+        $ref: /iso15118#/V2gMessageId
+      message_fields:
+        description: A list of V2G message fields
+        type: array
+        items:
+          type: object
+          $ref: /test_report#/MessageField
+  ReportMetadata:
+    description: The type providing additional context for reported events
+    type: object
+    additionalProperties: true
+    properties:
+      timestamp:
+        description: The ISO8601 date-time the reported event occurred
+        type: string
+        format: date-time
+      duration:
+        description: The duration of the reported event in milliseconds
+        type: integer
+      min_duration:
+        description: The minimum expected duration of the reported event in milliseconds
+        type: integer
+      max_duration:
+        description: The maximum expected duration of the reported event in milliseconds
+        type: integer
+  Report:
+    description: The type describing a single reported event
+    type: object
+    additionalProperties: false
+    required:
+      - report_type
+    properties:
+      report_type:
+        description: Type of the reported event
+        type: string
+        $ref: /test_report#/ReportType
+      bsp_event_data:
+        description: Report data for BspEvent events
+        type: object
+        $ref: /board_support_common#/BspEvent
+      bsp_measurement_data:
+        description: Report data for BspMeasurement events
+        type: object
+        $ref: /board_support_common#/BspMeasurement
+      v2g_message_data:
+        description: Report data for V2gMessage events
+        type: object
+        $ref: /test_report#/V2gMessageDetails
+      metadata:
+        description: Additional context for the reported event
+        type: object
+        $ref: /test_report#/ReportMetadata

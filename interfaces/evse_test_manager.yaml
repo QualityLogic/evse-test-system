@@ -1,0 +1,32 @@
+description: >-
+  This interface defines the EVSE Test Manager.
+cmds:
+  enqueue_test:
+    description: Add a new test to the queue to be executed.
+    arguments:
+      test_id:
+        description: Specifies the static ID of the test case
+        type: string
+        $ref: /evse_test_common#/TestId
+      constraints:
+        description: Specifies the constraints to apply
+        type: object
+        $ref: /evse_test_common#/TestConstraints
+    result:
+      description: Returns the test's unique instance ID to identify its results
+      type: string
+  cancel_test:
+    description: Cancel a test instance that's running or queued for execution.
+    arguments:
+      run_id:
+        description: Specifies the instance ID of the test to cancel
+        type: string
+vars:
+  test_status:
+    description: Provides status updates of test instances
+    type: object
+    $ref: /evse_test_manager#/TestStatus
+  test_result:
+    description: Provides results of completed test executions
+    type: object
+    $ref: /evse_test_manager#/TestResult
