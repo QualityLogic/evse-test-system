@@ -74,6 +74,18 @@ void SmartChargeScheduleTest::on_test_finished(v2g_connection* conn) {
     }
 }
 
+bool SmartChargeScheduleTest::is_within_tolerance_of(const double ev_target_current,
+                                                     const double ev_target_voltage,
+                                                     const double max_power) {
+    // If the target voltage is zero, we are within any PMax tolerance
+    if (ev_target_voltage == 0.0)
+        return true;
+
+    // Allow for up to 1A discrepancy
+    const double max_current = max_power / ev_target_voltage;
+    return ev_target_current <= max_current + 1.0; // within 1A of PMax
+}
+
 #pragma endregion COMMON
 
 #pragma region DIN_70121
@@ -427,15 +439,15 @@ v2g_event DinSmartChargeScheduleTest::handle_din_current_demand(v2g_connection* 
              static_cast<int>(this_scheduled_pmax));
 
         // Did the EV exceed the PMax of the current scheduled time interval?
-        if (ev_target_power > this_scheduled_pmax) {
+        if (!is_within_tolerance_of(ev_target_current, ev_target_voltage, this_scheduled_pmax)) {
             // Is the EV within the grace period of the last scheduled time interval?
-            if (ev_target_power <= last_scheduled_pmax and
+            if (is_within_tolerance_of(ev_target_current, ev_target_voltage, last_scheduled_pmax) and
                 schedule_elapsed_time <= last_schedule_start + SCHEDULE_ENTRY_DURATION + grace_period) {
                 // We are within the grace period of the last PMax Schedule Entry
                 log_grace_period_last_interval();
             }
             // Is the EV within the grace period of the next scheduled time interval?
-            else if (ev_target_power <= next_scheduled_pmax and
+            else if (is_within_tolerance_of(ev_target_current, ev_target_voltage, next_scheduled_pmax) and
                      schedule_elapsed_time >= next_schedule_start - grace_period) {
                 // We are within the grace period of the next PMax Schedule Entry
                 log_grace_period_next_interval();
@@ -444,7 +456,9 @@ v2g_event DinSmartChargeScheduleTest::handle_din_current_demand(v2g_connection* 
             else if (!ev_exceeded_scheduled_pmax) {
                 ev_exceeded_scheduled_pmax = true;
                 const auto max_power = this_scheduled_pmax < 0 ? 0 : this_scheduled_pmax;
-                const auto error_message = dc_scheduled_power_exceeded_error(ev_target_power, max_power);
+                const auto error_message = dc_scheduled_power_exceeded_error(
+                    static_cast<float>(ev_target_power),
+                    static_cast<float>(max_power));
                 conn->ctx->test_data.errors.push_back(error_message);
                 dlog(DLOG_LEVEL_INFO, error_message.c_str());
             }
@@ -898,16 +912,16 @@ v2g_event Iso2SmartChargeScheduleTest::handle_iso_charging_status(v2g_connection
             constexpr int tolerance = 50;
 
             // Did the EV exceed the PMax of the current scheduled time interval?
-            if ((this_scheduled_pmax == 0 and present_power > 120) or (this_scheduled_pmax > 1 and present_power > this_scheduled_pmax + tolerance)) {
+            if ((this_scheduled_pmax == 0 and present_power > 120) or (this_scheduled_pmax > 1 and present_power > static_cast<float>(this_scheduled_pmax + tolerance))) {
             // if (present_power > this_scheduled_pmax) {
                 // Is the EV within the grace period of the last scheduled time interval?
-                if (present_power <= (last_scheduled_pmax + tolerance) and
+                if (present_power <= static_cast<float>(last_scheduled_pmax + tolerance) and
                     schedule_elapsed_time <= last_schedule_start + SCHEDULE_ENTRY_DURATION + grace_period) {
                     // We are within the grace period of the last PMax Schedule Entry
                     log_grace_period_last_interval();
                 }
                 // Is the EV within the grace period of the next scheduled time interval?
-                else if (present_power <= (next_scheduled_pmax + tolerance) and
+                else if (present_power <= static_cast<float>(next_scheduled_pmax + tolerance) and
                          schedule_elapsed_time >= next_schedule_start - grace_period) {
                     // We are within the grace period of the next PMax Schedule Entry
                     log_grace_period_next_interval();
@@ -916,7 +930,7 @@ v2g_event Iso2SmartChargeScheduleTest::handle_iso_charging_status(v2g_connection
                 else if (!ev_exceeded_scheduled_pmax) {
                     ev_exceeded_scheduled_pmax = true;
                     const auto max_power = this_scheduled_pmax < 0 ? 0 : this_scheduled_pmax;
-                    const auto error_message = ac_scheduled_power_exceeded_error(present_power, max_power);
+                    const auto error_message = ac_scheduled_power_exceeded_error(present_power, static_cast<float>(max_power));
                     conn->ctx->test_data.errors.push_back(error_message);
                     dlog(DLOG_LEVEL_INFO, error_message.c_str());
                 }
@@ -1008,15 +1022,15 @@ v2g_event Iso2SmartChargeScheduleTest::handle_iso_current_demand(v2g_connection*
         }
 
         // Did the EV exceed the PMax of the current scheduled time interval?
-        if (ev_target_power > this_scheduled_pmax) {
+        if (!is_within_tolerance_of(ev_target_current, ev_target_voltage, this_scheduled_pmax)) {
             // Is the EV within the grace period of the last scheduled time interval?
-            if (ev_target_power <= last_scheduled_pmax and
+            if (is_within_tolerance_of(ev_target_current, ev_target_voltage, last_scheduled_pmax) and
                 schedule_elapsed_time <= last_schedule_start + SCHEDULE_ENTRY_DURATION + grace_period) {
                 // We are within the grace period of the last PMax Schedule Entry
                 log_grace_period_last_interval();
             }
             // Is the EV within the grace period of the next scheduled time interval?
-            else if (ev_target_power <= next_scheduled_pmax and
+            else if (is_within_tolerance_of(ev_target_current, ev_target_voltage, next_scheduled_pmax) and
                      schedule_elapsed_time >= next_schedule_start - grace_period) {
                 // We are within the grace period of the next PMax Schedule Entry
                 log_grace_period_next_interval();
@@ -1025,7 +1039,9 @@ v2g_event Iso2SmartChargeScheduleTest::handle_iso_current_demand(v2g_connection*
             else if (!ev_exceeded_scheduled_pmax) {
                 ev_exceeded_scheduled_pmax = true;
                 const auto max_power = this_scheduled_pmax < 0 ? 0 : this_scheduled_pmax;
-                const auto error_message = dc_scheduled_power_exceeded_error(ev_target_power, max_power);
+                const auto error_message = dc_scheduled_power_exceeded_error(
+                    static_cast<float>(ev_target_power),
+                    static_cast<float>(max_power));
                 conn->ctx->test_data.errors.push_back(error_message);
                 dlog(DLOG_LEVEL_INFO, error_message.c_str());
             }
@@ -1145,7 +1161,7 @@ std::optional<float> Iso2SmartChargeScheduleTest::get_and_clear_power_reading() 
     std::lock_guard lock(powermeter_mutex);
     if (power_reading_updated) {
         power_reading_updated = false;
-        return std::optional(power_reading_W);
+        return {power_reading_W};
     }
     return std::nullopt;
 }

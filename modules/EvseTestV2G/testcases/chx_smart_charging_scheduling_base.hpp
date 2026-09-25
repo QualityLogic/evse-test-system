@@ -37,6 +37,8 @@ protected:
      */
     virtual int set_maximum_scheduled_power(v2g_connection* conn, short maximum_power) = 0;
 
+    virtual bool is_within_tolerance_of(double ev_target_current, double ev_target_voltage, double max_power);
+
     // The maximum allowed offset between the EV and EVSE clocks
     static constexpr auto GRACE_PERIOD = std::chrono::milliseconds(V2G_TEST_SCHEDULE_ENTRY_GRACE_PERIOD);
 
