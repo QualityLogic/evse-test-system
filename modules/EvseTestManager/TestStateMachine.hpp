@@ -156,7 +156,7 @@ private:
 
     // constraints
     static constexpr auto MAINLOOP_UPDATE_RATE = std::chrono::milliseconds(250);
-    static constexpr auto V2G_HEARTBEAT_TIMEOUT = std::chrono::seconds(20);
+    static constexpr auto V2G_HEARTBEAT_TIMEOUT = std::chrono::seconds(30);
     static constexpr auto V2G_CANCELLATION_TIMEOUT = std::chrono::seconds(10);
 };
 
