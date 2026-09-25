@@ -35,6 +35,10 @@ protected:
     bool detected_cp_state_f = false;
 
     std::chrono::system_clock::time_point cp_state_f_time;
+    /// The system time the last SessionStopReq message was received
+    std::chrono::system_clock::time_point session_stop_req_time;
+    /// The system time the last SessionStopRes message was sent
+    std::chrono::system_clock::time_point session_stop_res_time;
 
     virtual const char* get_payment_selection_msg_name() = 0;
 
@@ -65,6 +69,7 @@ public:
 
 protected:
     v2g_event handle_din_service_payment_selection(v2g_connection* conn) override;
+    v2g_event handle_din_session_stop(v2g_connection* conn) override;
 
     const char* get_payment_selection_msg_name() override;
 };
@@ -79,6 +84,7 @@ public:
 
 protected:
     v2g_event handle_iso_payment_service_selection(v2g_connection* conn) override;
+    v2g_event handle_iso_session_stop(v2g_connection* conn) override;
 
     const char* get_payment_selection_msg_name() override;
 };

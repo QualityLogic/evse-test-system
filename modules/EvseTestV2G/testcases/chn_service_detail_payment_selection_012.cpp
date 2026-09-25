@@ -186,10 +186,10 @@ v2g_event DinTestServer::handle_request(v2g_connection* conn) {
     const auto request_type = find_req_message_type(conn);
 
     // Allow the communication to continue normally through ServicePaymentSelection
-    // if (request_type <= V2G_PAYMENT_SERVICE_SELECTION_MSG)
+    // if (request_type <= V2G_PAYMENT_SERVICE_SELECTION_MSG or request_type == V2G_SESSION_STOP_MSG)
     //     return DinTest::handle_request(conn);
 
-    if (request_type < V2G_POWER_DELIVERY_MSG) {
+    if (request_type < V2G_POWER_DELIVERY_MSG or request_type == V2G_SESSION_STOP_MSG) {
         if (cp_state_f_time.time_since_epoch().count() > 0) {
             const auto now = std::chrono::system_clock::now();
             const auto elapsed = cp_state_f_time - now;
@@ -259,6 +259,51 @@ v2g_event DinTestServer::handle_din_service_payment_selection(v2g_connection* co
     return next_event;
 }
 
+v2g_event DinTestServer::handle_din_session_stop(v2g_connection* conn) {
+    using std::chrono::duration_cast;
+    using std::chrono::milliseconds;
+    using std::chrono::system_clock;
+
+    const auto res = &conn->exi_out.dinEXIDocument->V2G_Message.Body.SessionStopRes;
+    v2g_event next_event;
+
+    if (detected_cp_state_f) {
+        // The current time is important for determining SessionSetup message timeouts
+        session_stop_req_time = system_clock::now();
+
+        const auto session_stop_duration = duration_cast<milliseconds>(session_stop_req_time - cp_state_f_time);
+        const auto session_stop_max_duration = milliseconds(V2G_TEST_TCP_CONNECTION_TERMINATION_TIMEOUT);
+
+        report_din_request(conn, conn->ctx->current_v2g_msg, {
+            .metadata {
+                .timestamp = timepoint_to_iso8601_str(session_stop_req_time),
+                .duration = static_cast<int>(session_stop_duration.count()),
+                .max_duration = static_cast<int>(session_stop_max_duration.count()),
+            },
+        });
+
+        // Allow the SessionStopReq to be handled normally
+        next_event = DinTest::handle_din_session_stop(conn);
+
+        if (next_event == V2G_EVENT_NO_EVENT or next_event == V2G_EVENT_SEND_AND_TERMINATE) {
+            // The current time is important for determining TCP termination timeouts
+            session_stop_res_time = system_clock::now();
+
+            report_din_response(conn, conn->ctx->current_v2g_msg, {
+                .response_code = res->ResponseCode,
+                .metadata = {
+                    .timestamp = timepoint_to_iso8601_str(session_stop_res_time),
+                },
+            });
+        }
+    } else {
+        // Allow the SessionStopReq to be handled normally
+        next_event = DinTest::handle_din_session_stop(conn);
+    }
+
+    return next_event;
+}
+
 const char* DinTestServer::get_payment_selection_msg_name() {
     return "ServicePaymentSelection";
 }
@@ -275,7 +320,7 @@ v2g_event Iso2TestServer::handle_request(v2g_connection* conn) {
     // if (request_type <= V2G_PAYMENT_SERVICE_SELECTION_MSG)
     //     return Iso2Test::handle_request(conn);
 
-    if (request_type < V2G_POWER_DELIVERY_MSG) {
+    if (request_type < V2G_POWER_DELIVERY_MSG or request_type == V2G_SESSION_STOP_MSG) {
         if (cp_state_f_time.time_since_epoch().count() > 0) {
             const auto now = std::chrono::system_clock::now();
             const auto elapsed = cp_state_f_time - now;
@@ -340,6 +385,52 @@ v2g_event Iso2TestServer::handle_iso_payment_service_selection(v2g_connection* c
         report_iso2_response(conn, conn->ctx->current_v2g_msg, {
             .response_code = res->ResponseCode,
         });
+    }
+
+    return next_event;
+}
+
+v2g_event Iso2TestServer::handle_iso_session_stop(v2g_connection* conn) {
+    using std::chrono::duration_cast;
+    using std::chrono::milliseconds;
+    using std::chrono::system_clock;
+
+    const auto res = &conn->exi_out.iso2EXIDocument->V2G_Message.Body.SessionStopRes;
+    v2g_event next_event;
+
+    // Event reporting is only relevant if the test was actually carried out (current demand was reached)
+    if (detected_cp_state_f) {
+        // The current time is important for determining SessionSetup message timeouts
+        session_stop_req_time = system_clock::now();
+
+        const auto session_stop_duration = duration_cast<milliseconds>(session_stop_req_time - cp_state_f_time);
+        const auto session_stop_max_duration = milliseconds(V2G_TEST_TCP_CONNECTION_TERMINATION_TIMEOUT);
+
+        report_iso2_request(conn, conn->ctx->current_v2g_msg, {
+            .metadata {
+                .timestamp = timepoint_to_iso8601_str(session_stop_req_time),
+                .duration = static_cast<int>(session_stop_duration.count()),
+                .max_duration = static_cast<int>(session_stop_max_duration.count()),
+            },
+        });
+
+        // Allow the SessionStopReq to be handled normally
+        next_event = Iso2Test::handle_iso_session_stop(conn);
+
+        if (next_event == V2G_EVENT_NO_EVENT or next_event == V2G_EVENT_SEND_AND_TERMINATE) {
+            // The current time is important for determining TCP termination timeouts
+            session_stop_res_time = system_clock::now();
+
+            report_iso2_response(conn, conn->ctx->current_v2g_msg, {
+                .response_code = res->ResponseCode,
+                .metadata = {
+                    .timestamp = timepoint_to_iso8601_str(session_stop_res_time),
+                },
+            });
+        }
+    } else {
+        // Allow the SessionStopReq to be handled normally
+        next_event = Iso2Test::handle_iso_session_stop(conn);
     }
 
     return next_event;
