@@ -29,7 +29,12 @@ inline bool is_cp_state_b(const types::board_support_common::Event& event) {
 void TestBase::on_update_bsp_event(v2g_connection* conn, const UpdateBspEvent& event) {
     if (validate_control_pilot) {
         if (is_cp_state_b(event.bsp_event)) {
-            cp_state_b_time = event.timestamp;
+            {
+                std::lock_guard lock(bsp_mutex);
+                cp_state_b_time = event.timestamp;
+                set_cp_state_b_time = true;
+            }
+            bsp_cv.notify_one();
         }
     }
 }
@@ -38,6 +43,7 @@ void TestBase::on_connection_close_event(v2g_connection* conn, const ConnectionC
     using std::chrono::duration_cast;
     using std::chrono::milliseconds;
 
+    const auto event_timestamp = timepoint_to_iso8601_str(event.timestamp);
     const auto test_data = &(conn->ctx->test_data);
 
     const auto precharge_timer_start = first_precharge_req_time;
@@ -106,9 +112,35 @@ void TestBase::on_connection_close_event(v2g_connection* conn, const ConnectionC
         test_data->errors.emplace_back("EV took too long to send a SessionStopReq");
     }
 
+    // Whether we reported the connection closure (to avoid double reporting it)
+    bool conn_close_reported = false;
+
     // If `validate_control_pilot` is 'true' then the control pilot was not in state 'B' at the time
     // the 'V2G_EVCC_PreCharge_Timer' expired. We must validate that the EV transitioned to state 'B'.
     if (validate_control_pilot) {
+
+        // Sometimes the connection is closed before the EV signals CP State 'B'. Let's wait until the end
+        // of the 'par_EVCC_StateB_Shutdown_Timeout' duration for the CP State 'B' to be received.
+        if (cp_state_b_time < last_precharge_res_time) {
+            // The timer starts shortly after the PreChargeRes should have been sent (not SessionStopRes)
+            const auto cp_state_b_timer_duration = duration_cast<milliseconds>(event.timestamp - last_precharge_res_time);
+            const auto cp_state_b_timer_max_duration = milliseconds(V2G_TEST_EVCC_STATE_B_SHUTDOWN_TIMEOUT);
+
+            // Only wait if we are still within the allowed CP State 'B' duration
+            if (cp_state_b_timer_duration < cp_state_b_timer_max_duration) {
+                const auto remaining_time = cp_state_b_timer_max_duration - cp_state_b_timer_duration;
+                if (wait_for_cp_state_b(remaining_time)) {
+                    // Report the connection closure now so that the control pilot transition
+                    // is reported afterwards to visually preserve event order.
+                    report_connection_closed(conn, {
+                        .timestamp = event_timestamp,
+                        .duration = static_cast<int>(tcp_close_elapsed.count()),
+                        .max_duration = V2G_TEST_TCP_CONNECTION_TERMINATION_TIMEOUT,
+                    });
+                    conn_close_reported = true;
+                }
+            }
+        }
 
         // If the `cp_state_b_time` references a point in time earlier than `last_precharge_res_time`,
         // then the control pilot signal never transitioned to state 'B' before the connection closed.
@@ -147,11 +179,13 @@ void TestBase::on_connection_close_event(v2g_connection* conn, const ConnectionC
     // The EV is required to terminate the TCP connection within 'par_CMN_TCP_Connection_Termination_Timeout'
     // of the last 'PreChargeRes' or 'SessionStopRes' response.
 
-    report_connection_closed(conn, {
-        .timestamp = timepoint_to_iso8601_str(event.timestamp),
-        .duration = static_cast<int>(tcp_close_elapsed.count()),
-        .max_duration = V2G_TEST_TCP_CONNECTION_TERMINATION_TIMEOUT,
-    });
+    if (!conn_close_reported) {
+        report_connection_closed(conn, {
+            .timestamp = timepoint_to_iso8601_str(event.timestamp),
+            .duration = static_cast<int>(tcp_close_elapsed.count()),
+            .max_duration = V2G_TEST_TCP_CONNECTION_TERMINATION_TIMEOUT,
+        });
+    }
 
     if (tcp_close_elapsed > milliseconds(V2G_TEST_TCP_CONNECTION_TERMINATION_TIMEOUT)) {
         dlog(DLOG_LEVEL_INFO, "EV exceeded TCP close time by %d ms",

@@ -29,7 +29,12 @@ void TestBase::on_update_bsp_event(v2g_connection* conn, const UpdateBspEvent& e
     if (validate_control_pilot) {
         // Did the EV signal state 'B' over control pilot?
         if (event.bsp_event == types::board_support_common::Event::B) {
-            cp_state_b_time = event.timestamp;
+            {
+                std::lock_guard lock(bsp_mutex);
+                cp_state_b_time = event.timestamp;
+                set_cp_state_b_time = true;
+            }
+            bsp_cv.notify_one();
         }
     }
 }
@@ -109,6 +114,20 @@ void TestBase::on_connection_close_event(v2g_connection* conn, const ConnectionC
     // If `validate_control_pilot` is 'true' then the control pilot was not in state 'B' at the time
     // the 'CableCheckReq' timer expired. We must validate that the EV transitioned to state 'B'.
     if (validate_control_pilot) {
+
+        // Sometimes the connection is closed before the EV signals CP State 'B'. Let's wait until the end
+        // of the 'par_EVCC_StateB_Shutdown_Timeout' duration for the CP State 'B' to be received.
+        if (not cp_state_b_time.time_since_epoch().count()) {
+            const auto cp_state_b_timer_start = last_cable_check_res_time + max_cable_check_sequence_duration;
+            const auto cp_state_b_timer_duration = duration_cast<milliseconds>(event.timestamp - cp_state_b_timer_start);
+            const auto cp_state_b_timer_max_duration = milliseconds(V2G_TEST_EVCC_STATE_B_SHUTDOWN_TIMEOUT);
+
+            // Only wait if we are still within the allowed CP State 'B' duration
+            if (cp_state_b_timer_duration < cp_state_b_timer_max_duration) {
+                const auto remaining_time = cp_state_b_timer_max_duration - cp_state_b_timer_duration;
+                wait_for_cp_state_b(remaining_time);
+            }
+        }
 
         // If the time since epoch is '0' then the control pilot signal never transitioned to state 'B'
         // before the connection closed.

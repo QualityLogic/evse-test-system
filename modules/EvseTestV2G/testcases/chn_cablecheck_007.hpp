@@ -34,6 +34,23 @@ protected:
     std::chrono::system_clock::time_point session_stop_req_time;
     /// The system time the last SessionStopRes message was sent
     std::chrono::system_clock::time_point session_stop_res_time;
+
+
+    /**
+     * Wait with a timeout for the next control pilot state 'B' event.
+     * @param timeout The maximum amount of time to wait.
+     * @return Whether the state 'B' was detected within the timeout.
+     */
+    template <typename _Rep, typename _Period>
+    bool wait_for_cp_state_b(const std::chrono::duration<_Rep, _Period>& timeout) {
+        std::unique_lock lock(bsp_mutex);
+        return bsp_cv.wait_for(lock, timeout, [this] { return set_cp_state_b_time; });
+    }
+
+private:
+    std::mutex bsp_mutex;
+    std::condition_variable bsp_cv;
+    bool set_cp_state_b_time = false;
 };
 
 /**

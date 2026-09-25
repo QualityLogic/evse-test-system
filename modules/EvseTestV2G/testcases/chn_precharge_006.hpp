@@ -56,6 +56,22 @@ protected:
      * @return <c>true</c> if the timers have unambiguously expired, otherwise <c>false</c>.
      */
     bool is_precharge_running_forever(const std::chrono::system_clock::time_point& time) const;
+
+    /**
+     * Wait with a timeout for the next control pilot state 'B' event.
+     * @param timeout The maximum amount of time to wait.
+     * @return Whether the state 'B' was detected within the timeout.
+     */
+    template <typename _Rep, typename _Period>
+    bool wait_for_cp_state_b(const std::chrono::duration<_Rep, _Period>& timeout) {
+        std::unique_lock lock(bsp_mutex);
+        return bsp_cv.wait_for(lock, timeout, [this] { return set_cp_state_b_time; });
+    }
+
+private:
+    std::mutex bsp_mutex;
+    std::condition_variable bsp_cv;
+    bool set_cp_state_b_time = false;
 };
 
 /**
